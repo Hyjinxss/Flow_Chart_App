@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ratio Tree Flowchart</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --panel: #111827; /* gray-900 */
+      --muted: #334155; /* slate-600 */
+      --text: #e5e7eb; /* gray-200 */
+      --accent: #22d3ee; /* cyan-400 */
+      --warn: #f59e0b; /* amber-500 */
+      --error: #ef4444; /* red-500 */
+      --ok: #10b981; /* emerald-500 */
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0b1222, var(--bg));
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: grid;
+      grid-template-rows: auto 1fr;
+      user-select: none; /* helpful during dragging */
+    }
+
+    header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #1f2937;
+      background: rgba(17,24,39,0.7);
+      backdrop-filter: blur(6px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: 0.3px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0b1324;
+      border: 1px solid #1f2937;
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    input[type="number"], input[type="text"], textarea {
+      background: #0b1324;
+      border: 1px solid #1f2937;
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(34,211,238,0.2);
+    }
+
+    .btn {
+      background: linear-gradient(180deg, #0891b2, #0ea5e9);
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .btn.secondary { background: #1f2937; color: #cbd5e1; }
+    .btn.ghost { background: transparent; border: 1px solid #1f2937; color: #cbd5e1; }
+    .btn.danger { background: linear-gradient(180deg, #dc2626, #ef4444); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 12px;
+      height: calc(100vh - 64px);
+      padding: 12px;
+    }
+
+    .panel {
+      background: #0b1324;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+
+    label { color: #93c5fd; font-size: 12px; }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+    }
+
+    .warnings {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #0a1222;
+      border: 1px solid #1f2937;
+      color: #eab308;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .canvas-wrap {
+      background: radial-gradient(1000px 600px at 50% -10%, rgba(34,211,238,0.08), transparent 60%), #071125;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    svg { width: 100%; height: 100%; display: block; cursor: default; }
+
+    .node { filter: drop-shadow(0 10px 10px rgba(0,0,0,0.25)); cursor: grab; }
+    .node.dragging { cursor: grabbing; }
+
+    .node-rect {
+      fill: #0b1324;
+      stroke: #334155;
+      stroke-width: 1.25;
+      rx: 10;
+      transition: stroke 0.12s ease-out;
+    }
+
+    .node-rect.selected { stroke: var(--accent); stroke-width: 2; }
+
+    .node-title { font-size: 12px; fill: #e5e7eb; font-weight: 700; }
+    .node-value { font-size: 12px; fill: #93c5fd; }
+    .node-subvalue { font-size: 11px; fill: #94a3b8; }
+
+    .edge { stroke: #2dd4bf; stroke-width: 2; fill: none; opacity: 0.85; }
+    .edge-label { font-size: 11px; fill: #a7f3d0; background: transparent; cursor: pointer; }
+
+    .legend { display: flex; gap: 12px; align-items: center; font-size: 12px; color: #cbd5e1; margin-top: 6px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding: 4px 8px; border-radius: 9999px; background:#0b1324; border:1px solid #1f2937; }
+    .chip .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .dot-edge { background:#2dd4bf; }
+    .dot-node { background:#60a5fa; }
+
+    .inspector { margin-top: 12px; padding-top: 10px; border-top: 1px solid #1f2937; }
+    .inspector .section-title { font-size: 13px; color: #cbd5e1; margin: 0 0 8px; font-weight: 600; }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom: 1px solid #1f2937; padding: 6px 4px; font-size: 12px; }
+    .table th { text-align: left; color: #93c5fd; font-weight: 600; }
+    .right { text-align: right; }
+    .muted { color: #94a3b8; }
+
+    /* Selection marquee */
+    .marquee {
+      fill: rgba(34,211,238,0.15);
+      stroke: #22d3ee;
+      stroke-width: 1.5;
+      stroke-dasharray: 6 4;
+      pointer-events: none;
+    }
+
+    /* Add Child button */
+    .add-child { opacity: 0; transition: opacity 0.12s ease-out; pointer-events: all; }
+    .node:hover .add-child { opacity: 1; }
+    .add-btn-bg { fill: #0b1324; stroke: var(--accent); stroke-width: 1.25; }
+    .add-child line { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+    .add-child:hover .add-btn-bg { fill: #0a1a33; }
+
+    /* Completed state */
+    .node-rect.completed { fill: rgb(124, 189, 121); stroke: rgb(124, 189, 121); }
+    .node.completed .node-title,
+    .node.completed .node-value,
+    .node.completed .node-subvalue { fill: #000000; }
+
+    /* Complete button (hover) */
+    .complete-btn { opacity: 0; transition: opacity 0.12s ease-out; pointer-events: all; }
+    .node:hover .complete-btn { opacity: 1; }
+    .complete-btn .btn-bg { fill: #0b1324; stroke: #10b981; stroke-width: 1.25; }
+    .complete-btn line, .complete-btn path { stroke: #10b981; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .complete-btn:hover .btn-bg { fill: #0a1f17; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ratio Tree Flowchart</h1>
+    <div class="controls">
+      <div class="control">
+        <label for="baseCount">Base count (root):</label>
+        <input id="baseCount" type="number" value="5" min="0" step="1" />
+      </div>
+      <div class="control">
+        <label for="normalize">Distribution mode (normalize to 100%)</label>
+        <input id="normalize" type="checkbox" />
+      </div>
+      <div class="control">
+        <label for="autoScale">Auto-scale nodes if children ></label>
+        <input id="autoScale" type="checkbox" checked />
+        <input id="scaleThreshold" type="number" value="4" min="1" step="1" style="width:64px" />
+      </div>
+      <div class="control">
+        <label for="minScale">Min scale</label>
+        <input id="minScale" type="number" value="0.6" min="0.2" max="1" step="0.05" style="width:72px" />
+      </div>
+      <button id="renderBtn" class="btn">Render</button>
+      <button id="downloadBtn" class="btn secondary">Download SVG</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:6px;">
+          <input id="toggleConfig" type="checkbox" /> Show Configuration JSON
+        </label>
+      </div>
+      <div id="configSection" hidden>
+        <h2>Configuration (JSON)</h2>
+        <div class="row">
+          <small>
+            Each child value = parent value × ratio. With distribution mode on, ratios per parent are normalized to sum to 1 (percentages).
+            With distribution mode off, ratios are treated as multipliers (can exceed 1.0).
+          </small>
+        </div>
+        <textarea id="configInput" spellcheck="false"></textarea>
+        <div id="warnings" class="warnings" hidden></div>
+      </div>
+
+      <div class="inspector" id="inspector" hidden>
+        <h3 class="section-title">Node Inspector</h3>
+        <div class="kv"><label>Label</label><input id="ins-label" type="text" /></div>
+        <div class="kv"><label>Completed (subtree)</label><input id="ins-completed" type="checkbox" /></div>
+
+        <div class="row" style="gap:8px; margin: 10px 0;">
+          <button id="addChildBtn" class="btn ghost" title="Add a new child node under this node">Add Child</button>
+          <button id="deleteNodeBtn" class="btn danger" title="Delete this node and all descendants">Delete Node + Subtree</button>
+        </div>
+
+        <h4 class="section-title">Children Ratios</h4>
+        <table class="table" id="ins-children">
+          <thead>
+            <tr>
+              <th>Child</th>
+              <th id="ins-col-raw-title" class="right">Raw Ratio</th>
+              <th id="ins-col-norm-title" class="right muted">Normalized</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="row" style="margin-top:8px;">
+          <button id="equalizeBtn" class="btn ghost" title="Set equal shares (distribution) or x1 (multiplier)">Equalize</button>
+          <span class="muted">Edits update the JSON config automatically.</span>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="chip"><span class="dot dot-node"></span>Node: label + computed value</span>
+        <span class="chip"><span class="dot dot-edge"></span>Edge label: ratio (% or xN)</span>
+      </div>
+    </section>
+
+    <section class="canvas-wrap" id="canvasWrap">
+      <svg id="svg"></svg>
+    </section>
+  </div>
+
+  <script>
+    // --- App State ---
+    const app = {
+      config: null,          // raw config (root, nodes: { id: {label, children:[{id, ratio}]}})
+      normalize: false,      // distribution mode (normalize per parent)
+      positions: {},         // world coords: id -> {x,y,w,h}
+      elements: {            // SVG element refs
+        viewport: null,      // <g> that holds all edges/nodes (transformable)
+        overlay: null,       // <g> overlay for marquee, not scaled
+        nodes: new Map(),    // id -> { g, rect, title, value }
+        edges: []            // { pid, cid, path, label }
+      },
+      // view transform
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      // selection
+      selectedId: null,
+      selectedIds: new Set(),
+      // dragging
+      dragging: null,        // { id, pointerId, offsetX, offsetY, moved }
+      draggingGroup: null,   // { pointerId, startWorld:{x,y}, initial: Map<id,{x,y}> }
+      editingLabelId: null,  // id currently being edited inline
+      scaleFactors: {},      // id -> scale (apply to child nodes of crowded parents)
+    };
+
+    // --- Utilities ---
+    function $(id) { return document.getElementById(id); }
+    function formatValue(v) { const isInt = Number.isInteger(v); const n = isInt ? v : Math.round(v * 100) / 100; return n.toLocaleString(); }
+    function percentStr(ratio) { return (Math.round(ratio * 1000) / 10).toFixed(1) + '%'; }
+    function timesStr(ratio) { return 'x' + (Math.round(ratio * 100) / 100).toFixed(2); }
+    function ratioLabel(ratio) { return app.normalize ? percentStr(ratio) : timesStr(ratio); }
+    function getScale(id) { return (app.scaleFactors && app.scaleFactors[id]) || 1; }
+    // Format labels for display (insert spaces for CamelCase/PascalCase, split on '_' and '-')
+    function displayLabel(raw) {
+      if (!raw) return '';
+      // If already contains whitespace, just normalize single spaces but keep as-is
+      let s = String(raw);
+      // Replace underscores/hyphens with spaces
+      s = s.replace(/[\-_]+/g, ' ');
+      // Split boundaries: lower->upper or number transitions
+      s = s
+        .replace(/([a-z])([A-Z0-9])/g, '$1 $2')
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+        .replace(/([0-9])([A-Za-z])/g, '$1 $2')
+        .replace(/([A-Za-z])([0-9])/g, '$1 $2');
+      // Collapse multiple spaces but preserve single spaces
+      s = s.replace(/\s{2,}/g, ' ').trim();
+      return s;
+    }
+    function showWarnings(list) { const el=$('warnings'); if (!list.length) { el.hidden = true; el.textContent = ''; return; } el.hidden = false; el.textContent = list.join('\n'); }
+
+    function downloadSVG(svgEl, name = 'ratio-tree.svg') {
+      const serializer = new XMLSerializer();
+      let src = serializer.serializeToString(svgEl);
+      if (!src.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)) {
+        src = src.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      const blob = new Blob([src], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+    }
+
+    // Convert client -> SVG root coords (not affected by viewport group transform)
+    function clientToRoot(evt) {
+      const svg = $('svg');
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      const res = pt.matrixTransform(svg.getScreenCTM().inverse());
+      return { x: res.x, y: res.y };
+    }
+    // Convert root -> world coords (inverse of viewport transform)
+    function rootToWorld(p) {
+      return { x: (p.x - app.panX) / app.zoom, y: (p.y - app.panY) / app.zoom };
+    }
+    // Convert world -> root coords
+    function worldToRoot(p) {
+      return { x: app.panX + p.x * app.zoom, y: app.panY + p.y * app.zoom };
+    }
+
+    // --- Default Config ---
+    const defaultConfig = {
+      root: 'A',
+      nodes: {
+        A: { label: 'Top', children: [ { id: 'B', ratio: 2.0 }, { id: 'C', ratio: 1.5 } ] },
+        B: { label: 'Branch B', children: [ { id: 'D', ratio: 2.0 }, { id: 'E', ratio: 1.0 } ] },
+        C: { label: 'Branch C', children: [ { id: 'F', ratio: 0.5 }, { id: 'G', ratio: 3.0 } ] },
+        D: { label: 'Leaf D', children: [] },
+        E: { label: 'Leaf E', children: [] },
+        F: { label: 'Leaf F', children: [] },
+        G: { label: 'Leaf G', children: [] }
+      }
+    };
+
+    // --- Config serialization ---
+    function setTextareaFromConfig(cfg) { $('configInput').value = JSON.stringify(cfg, null, 2); }
+    function setConfigFromTextarea() {
+      const raw = $('configInput').value;
+      // If empty, seed with default config so there's always a starting node
+      if (!raw || !raw.trim()) {
+        app.config = JSON.parse(JSON.stringify(defaultConfig));
+        setTextareaFromConfig(app.config);
+        return;
+      }
+      let cfg;
+      try { cfg = JSON.parse(raw); }
+      catch (e) { throw new Error('Invalid JSON in configuration: ' + e.message); }
+      if (!cfg || typeof cfg !== 'object') throw new Error('Config must be a JSON object');
+      // Ensure nodes exists
+      if (!cfg.nodes || typeof cfg.nodes !== 'object') cfg.nodes = {};
+      // Ensure a root id exists; if missing, pick first node key or fallback
+      if (!cfg.root || typeof cfg.root !== 'string') {
+        const firstKey = Object.keys(cfg.nodes)[0] || 'A';
+        cfg.root = firstKey;
+      }
+      // Ensure root node entry exists
+      if (!cfg.nodes[cfg.root]) {
+        cfg.nodes[cfg.root] = { label: cfg.root, children: [] };
+      }
+      // Normalize
+      const norm = { root: cfg.root, nodes: {} };
+      for (const [id, n] of Object.entries(cfg.nodes)) {
+        norm.nodes[id] = { label: (n && typeof n.label === 'string') ? n.label : id, completed: Boolean(n?.completed), children: Array.isArray(n?.children) ? n.children.map(ch => ({ id: ch.id, ratio: Number(ch.ratio)||0 })) : [] };
+      }
+      app.config = norm;
+    }
+
+    // --- Model build (normalize for rendering) ---
+    function buildModel(cfg, normalizeFlag) {
+      const warnings = [];
+      const nodes = {};
+      const parentOf = {};
+      const root = cfg.root;
+      for (const [id, n] of Object.entries(cfg.nodes)) { nodes[id] = { id, label: n.label || id, children: [] }; }
+      for (const [pid, n] of Object.entries(cfg.nodes)) {
+        const children = n.children || [];
+        const sum = children.reduce((a, ch) => a + (Number(ch.ratio)||0), 0);
+        const denom = (normalizeFlag && sum > 0) ? sum : 1;
+        if (children.length && normalizeFlag && Math.abs(sum - 1) > 1e-6) warnings.push(`Info: Ratios for parent ${pid} sum to ${sum.toFixed(4)}. Normalized to 1.0 for rendering.`);
+        for (const ch of children) {
+          const cid = ch.id; const raw = Number(ch.ratio)||0; const ratio = denom === 0 ? 0 : raw / denom;
+          if (!nodes[cid]) { nodes[cid] = { id: cid, label: cid, children: [] }; warnings.push(`Info: Child node ${cid} missing in nodes; created with default label.`); }
+          if (parentOf[cid] && parentOf[cid] !== pid) throw new Error(`Invalid tree: Node ${cid} has multiple parents (${parentOf[cid]} and ${pid}).`);
+          if (cid === pid) throw new Error(`Invalid edge: Node ${pid} cannot be a child of itself.`);
+          parentOf[cid] = pid; nodes[pid].children.push({ id: cid, ratio, rawRatio: raw });
+        }
+      }
+      const reachable = new Set([root]); const q = [root];
+      while (q.length) { const cur = q.shift(); for (const ch of nodes[cur]?.children || []) { if (!reachable.has(ch.id)) { reachable.add(ch.id); q.push(ch.id); } } }
+      for (const id of Object.keys(nodes)) { if (!reachable.has(id)) warnings.push(`Info: Node ${id} is not reachable from root ${root}.`); }
+      return { root, nodes, warnings, reachable };
+    }
+
+    // --- Compute values by BFS ---
+    function computeValues(model, baseCount) {
+      const { root, nodes, reachable } = model;
+      const values = {}; const level = {}; const orderByLevel = {};
+      values[root] = Number(baseCount) || 0; level[root] = 0; const q = [root];
+      while (q.length) { const cur = q.shift(); const curVal = values[cur] || 0; const children = (nodes[cur]?.children || []).filter(ch => reachable.has(ch.id)); for (const ch of children) { values[ch.id] = (values[ch.id] || 0) + curVal * ch.ratio; level[ch.id] = (level[cur] || 0) + 1; q.push(ch.id); } }
+      let maxLevel = 0; for (const [id, lv] of Object.entries(level)) { if (!orderByLevel[lv]) orderByLevel[lv] = []; orderByLevel[lv].push(id); if (lv > maxLevel) maxLevel = lv; }
+      return { values, level, orderByLevel, maxLevel };
+    }
+
+    // --- Auto layout ---
+    function autoLayout(orderByLevel, maxLevel, containerWidth) {
+      const nodeW = 170, nodeH = 64, hGap = 60, topPad = 40, vGap = 120, sidePad = 30;
+      const positions = {}; let height = topPad + (maxLevel + 1) * (nodeH + vGap) + 40;
+      for (let lv = 0; lv <= maxLevel; lv++) { const ids = orderByLevel[lv] || []; const count = ids.length; if (!count) continue; const totalW = count * nodeW + (count - 1) * hGap; const startX = Math.max(sidePad, (containerWidth - totalW) / 2); const y = topPad + lv * (nodeH + vGap); ids.forEach((id, i) => { const x = startX + i * (nodeW + hGap); positions[id] = { x, y, w: nodeW, h: nodeH }; }); }
+      return { positions, width: containerWidth, height, nodeW, nodeH };
+    }
+
+    // merge persisted manual positions
+    function mergePositions(defaultPos) {
+      const out = {}; for (const [id, p] of Object.entries(defaultPos)) { out[id] = { ...p }; if (app.positions[id]) { out[id].x = app.positions[id].x; out[id].y = app.positions[id].y; } }
+      for (const [id, p] of Object.entries(app.positions)) { if (!out[id]) out[id] = { ...p }; }
+      return out;
+    }
+
+    // --- Draw Graph ---
+    function ensureLayers(width, height) {
+      const svg = $('svg');
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
+      const viewport = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      viewport.setAttribute('id', 'viewport');
+      viewport.setAttribute('transform', `translate(${app.panX}, ${app.panY}) scale(${app.zoom})`);
+      const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      overlay.setAttribute('id', 'overlay');
+      svg.appendChild(viewport); svg.appendChild(overlay);
+      app.elements.viewport = viewport; app.elements.overlay = overlay;
+    }
+
+    function updateViewportTransform() {
+      if (app.elements.viewport) app.elements.viewport.setAttribute('transform', `translate(${app.panX}, ${app.panY}) scale(${app.zoom})`);
+    }
+
+    function drawGraph(model, values, layout) {
+      ensureLayers(layout.width, layout.height);
+      app.elements.nodes = new Map();
+      app.elements.edges = [];
+      const vp = app.elements.viewport;
+
+      // Draw edges first
+      for (const [pid, pNode] of Object.entries(model.nodes)) {
+        const pPos = layout.positions[pid]; if (!pPos) continue;
+        for (const ch of pNode.children || []) {
+          const cid = ch.id; const cPos = layout.positions[cid]; if (!cPos) continue;
+          const { path, label } = createEdge(pid, cid, pPos, cPos, ch.ratio);
+          vp.appendChild(path); vp.appendChild(label);
+          app.elements.edges.push({ pid, cid, path, label });
+        }
+      }
+
+      // Draw nodes
+      for (const [id, pos] of Object.entries(layout.positions)) {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const s = getScale(id);
+        g.setAttribute('class', 'node'); g.setAttribute('data-id', id); g.setAttribute('transform', `translate(${pos.x}, ${pos.y}) scale(${s})`);
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); rect.setAttribute('class', 'node-rect'); rect.setAttribute('width', pos.w); rect.setAttribute('height', pos.h);
+        const isCompleted = !!(app.config.nodes[id] && app.config.nodes[id].completed);
+        if (isCompleted) { rect.classList.add('completed'); g.classList.add('completed'); }
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'text'); title.setAttribute('class', 'node-title'); title.setAttribute('xml:space', 'preserve'); title.setAttribute('x', 12); title.setAttribute('y', 22); title.textContent = displayLabel(model.nodes[id].label || id);
+        const val = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        val.setAttribute('class', 'node-value');
+        val.setAttribute('x', 12);
+        val.setAttribute('y', 44);
+        const totalVal = values[id] || 0;
+        val.textContent = formatValue(totalVal);
+        let sub = null;
+        if (totalVal > 64) {
+          const totalInt = Math.floor(totalVal);
+          const q = Math.floor(totalInt / 64);
+          const r = totalInt % 64;
+          const subText = `${q}×64 + ${r}`;
+          sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          sub.setAttribute('class', 'node-subvalue');
+          sub.setAttribute('x', 12);
+          sub.setAttribute('y', 60);
+          sub.textContent = subText;
+        }
+        rect.addEventListener('pointerdown', onNodePointerDown);
+        rect.addEventListener('dblclick', (e) => { e.stopPropagation(); startInlineLabelEdit(id); });
+        title.addEventListener('dblclick', (e) => { e.stopPropagation(); startInlineLabelEdit(id); });
+
+        // Add child button (visible on hover)
+        const add = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        add.setAttribute('class', 'add-child');
+        const cx = pos.w / 2; const cy = pos.h - 8;
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bg.setAttribute('class', 'add-btn-bg');
+        bg.setAttribute('cx', String(cx));
+        bg.setAttribute('cy', String(cy));
+        bg.setAttribute('r', '9');
+        const hline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hline.setAttribute('x1', String(cx - 5)); hline.setAttribute('y1', String(cy));
+        hline.setAttribute('x2', String(cx + 5)); hline.setAttribute('y2', String(cy));
+        const vline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        vline.setAttribute('x1', String(cx)); vline.setAttribute('y1', String(cy - 5));
+        vline.setAttribute('x2', String(cx)); vline.setAttribute('y2', String(cy + 5));
+        add.appendChild(bg); add.appendChild(hline); add.appendChild(vline);
+        add.addEventListener('click', (e) => { e.stopPropagation(); addChildToNode(id); });
+
+        // Complete toggle button (top-right)
+        const comp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        comp.setAttribute('class', 'complete-btn');
+        const cCx = pos.w - 10, cCy = 10;
+        const cbg = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); cbg.setAttribute('class', 'btn-bg'); cbg.setAttribute('cx', String(cCx)); cbg.setAttribute('cy', String(cCy)); cbg.setAttribute('r', '8');
+        const tick = document.createElementNS('http://www.w3.org/2000/svg', 'path'); tick.setAttribute('d', `M ${cCx-4} ${cCy} L ${cCx-1} ${cCy+3} L ${cCx+4} ${cCy-3}`);
+        comp.appendChild(cbg); comp.appendChild(tick);
+        comp.addEventListener('click', (e) => { e.stopPropagation(); toggleCompletedSubtree(id, !(app.config.nodes[id]?.completed)); });
+
+        g.appendChild(rect);
+        g.appendChild(title);
+        g.appendChild(val);
+        if (sub) g.appendChild(sub);
+        g.appendChild(add);
+        g.appendChild(comp);
+        app.elements.viewport.appendChild(g);
+        app.elements.nodes.set(id, { g, rect, title, value: val });
+      }
+      updateSelectionHighlight();
+    }
+
+    function createEdge(pid, cid, pPos, cPos, ratio) {
+      const sP = getScale(pid), sC = getScale(cid);
+      const x1 = pPos.x + (pPos.w * sP) / 2; const y1 = pPos.y + (pPos.h * sP); const x2 = cPos.x + (cPos.w * sC) / 2; const y2 = cPos.y; const dx = (x2 - x1) * 0.25;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const d = `M ${x1} ${y1} C ${x1 + dx} ${y1 + 30}, ${x2 - dx} ${y2 - 30}, ${x2} ${y2}`; path.setAttribute('d', d); path.setAttribute('class', 'edge');
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      const t = 0.5; const p0 = { x: x1, y: y1 }, p1 = { x: x1 + dx, y: y1 + 30 }, p2 = { x: x2 - dx, y: y2 - 30 }, p3 = { x: x2, y: y2 };
+      const bx = bezierPoint(p0.x, p1.x, p2.x, p3.x, t); const by = bezierPoint(p0.y, p1.y, p2.y, p3.y, t);
+      label.setAttribute('x', bx + 4); label.setAttribute('y', by - 6); label.setAttribute('class', 'edge-label'); label.textContent = ratioLabel(ratio);
+      label.addEventListener('dblclick', (e) => { e.stopPropagation(); startInlineEdgeRatioEdit(pid, cid, label); });
+      return { path, label };
+    }
+
+    function updateGraphGeometry(model, layout) {
+      for (const [id, el] of app.elements.nodes.entries()) { const p = layout.positions[id]; if (!p) continue; const s = getScale(id); el.g.setAttribute('transform', `translate(${p.x}, ${p.y}) scale(${s})`); }
+      for (const e of app.elements.edges) {
+        const pPos = layout.positions[e.pid]; const cPos = layout.positions[e.cid]; if (!pPos || !cPos) continue;
+        const sP = getScale(e.pid), sC = getScale(e.cid);
+        const x1 = pPos.x + (pPos.w * sP) / 2; const y1 = pPos.y + (pPos.h * sP); const x2 = cPos.x + (cPos.w * sC) / 2; const y2 = cPos.y; const dx = (x2 - x1) * 0.25;
+        const d = `M ${x1} ${y1} C ${x1 + dx} ${y1 + 30}, ${x2 - dx} ${y2 - 30}, ${x2} ${y2}`; e.path.setAttribute('d', d);
+        const t = 0.5; const p0 = { x: x1, y: y1 }, p1 = { x: x1 + dx, y: y1 + 30 }, p2 = { x: x2 - dx, y: y2 - 30 }, p3 = { x: x2, y: y2 };
+        const bx = bezierPoint(p0.x, p1.x, p2.x, p3.x, t); const by = bezierPoint(p0.y, p1.y, p2.y, p3.y, t);
+        e.label.setAttribute('x', bx + 4); e.label.setAttribute('y', by - 6);
+      }
+    }
+
+    function bezierPoint(p0, p1, p2, p3, t) { const u=1-t; return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3; }
+
+    // --- Inline label editing ---
+    function startInlineLabelEdit(id) {
+      if (!app.elements.nodes.has(id)) return;
+      app.editingLabelId = id;
+      const el = app.elements.nodes.get(id); const pos = app.positions[id];
+      const old = el.g.querySelector('foreignObject[data-role="label-editor"]'); if (old) old.remove();
+      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+      fo.setAttribute('data-role', 'label-editor'); fo.setAttribute('x', 8); fo.setAttribute('y', 6); fo.setAttribute('width', Math.max(40, pos.w - 16)); fo.setAttribute('height', 26);
+      const container = document.createElement('div'); container.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      const input = document.createElement('input'); input.type = 'text'; input.value = app.config.nodes[id].label || id; input.style.width = '100%'; input.style.height = '24px'; input.style.padding = '2px 6px'; input.style.borderRadius = '6px'; input.style.border = '1px solid #22d3ee'; input.style.outline = 'none'; input.style.background = '#0b1324'; input.style.color = '#e5e7eb'; input.style.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial';
+      const commit = () => { const newLabel = (input.value === '') ? id : input.value; app.config.nodes[id].label = newLabel; setTextareaFromConfig(app.config); app.editingLabelId = null; renderPreservePositions(); };
+      const cancel = () => { app.editingLabelId = null; fo.remove(); };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { e.preventDefault(); cancel(); } });
+      input.addEventListener('blur', commit);
+      container.appendChild(input); fo.appendChild(container); el.g.appendChild(fo); input.focus(); input.select();
+    }
+
+    // --- Inline edge ratio editing ---
+    function startInlineEdgeRatioEdit(pid, cid, labelEl) {
+      // Remove any existing editor
+      const overlay = app.elements.overlay || $('svg');
+      const existing = overlay.querySelector('foreignObject[data-role="edge-editor"]') || $('svg').querySelector('foreignObject[data-role="edge-editor"]');
+      if (existing) existing.remove();
+
+      // find current raw ratio from config
+      const chList = app.config.nodes[pid]?.children || [];
+      const ch = chList.find(c => c.id === cid);
+      if (!ch) return;
+      const current = Number(ch.ratio) || 0;
+
+      // Label coords are in world (viewport) space. Convert to root for overlay placement.
+      const worldX = Number(labelEl.getAttribute('x')) || 0;
+      const worldY = Number(labelEl.getAttribute('y')) || 0;
+      const rootPos = worldToRoot({ x: worldX, y: worldY });
+
+      const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+      fo.setAttribute('data-role', 'edge-editor');
+      const w = 86, h = 28;
+      fo.setAttribute('x', String(Math.max(0, rootPos.x - w / 2)));
+      fo.setAttribute('y', String(Math.max(0, rootPos.y - h - 6)));
+      fo.setAttribute('width', String(w));
+      fo.setAttribute('height', String(h));
+
+      const container = document.createElement('div');
+      container.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      const input = document.createElement('input');
+      input.type = 'number'; input.step = '0.01'; input.min = '0';
+      input.value = String(current);
+      input.style.width = (w - 8) + 'px';
+      input.style.height = '22px';
+      input.style.padding = '1px 4px';
+      input.style.borderRadius = '6px';
+      input.style.border = '1px solid #22d3ee';
+      input.style.outline = 'none';
+      input.style.background = '#0b1324';
+      input.style.color = '#e5e7eb';
+      input.style.font = '11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New"';
+      input.title = app.normalize ? 'Enter raw weight (displayed as %)' : 'Enter multiplier (xN)';
+
+      const commit = () => { const v = Number(input.value); ch.ratio = isFinite(v) && v >= 0 ? v : current; setTextareaFromConfig(app.config); renderPreservePositions(); };
+      const cancel = () => { fo.remove(); };
+
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { e.preventDefault(); cancel(); } });
+      input.addEventListener('blur', commit);
+
+      container.appendChild(input);
+      fo.appendChild(container);
+      overlay.appendChild(fo);
+      input.focus(); input.select();
+    }
+
+    // --- Node interactions ---
+    function onNodePointerDown(evt) {
+      if (app.editingLabelId) return; // don't drag while inline editing
+      const rect = evt.currentTarget; const g = rect.parentNode; const id = g.getAttribute('data-id');
+      const rootPt = clientToRoot(evt); const worldPt = rootToWorld(rootPt);
+
+      // Decide single vs group drag
+      const draggingGroup = app.selectedIds.has(id) && app.selectedIds.size > 1;
+      if (draggingGroup) {
+        const initial = new Map(); for (const sid of app.selectedIds) { const p = app.positions[sid]; if (p) initial.set(sid, { x: p.x, y: p.y }); }
+        app.draggingGroup = { pointerId: evt.pointerId, startWorld: { x: worldPt.x, y: worldPt.y }, initial };
+      } else {
+        const pos = app.positions[id] || { x: 0, y: 0, w: rect.getAttribute('width')|0, h: rect.getAttribute('height')|0 };
+        app.dragging = { id, pointerId: evt.pointerId, offsetX: worldPt.x - pos.x, offsetY: worldPt.y - pos.y, moved: false };
+      }
+
+      rect.setPointerCapture(evt.pointerId); g.classList.add('dragging'); g.dataset.downX = worldPt.x; g.dataset.downY = worldPt.y;
+      rect.addEventListener('pointermove', onNodePointerMove);
+      rect.addEventListener('pointerup', onNodePointerUp, { once: true }); rect.addEventListener('pointercancel', onNodePointerCancel, { once: true });
+      evt.preventDefault();
+
+      // If clicked node not already selected in multi-select scenario, select it
+      if (!app.selectedIds.has(id)) selectOnly(id);
+    }
+
+    function onNodePointerMove(evt) {
+      const rootPt = clientToRoot(evt); const worldPt = rootToWorld(rootPt);
+      if (app.draggingGroup) {
+        const deltaX = worldPt.x - app.draggingGroup.startWorld.x; const deltaY = worldPt.y - app.draggingGroup.startWorld.y;
+        for (const [sid, init] of app.draggingGroup.initial.entries()) {
+          const cur = app.positions[sid]; if (!cur) continue; cur.x = init.x + deltaX; cur.y = init.y + deltaY;
+        }
+        scheduleGeometryUpdate();
+        return;
+      }
+      if (!app.dragging) return;
+      const { id, offsetX, offsetY } = app.dragging; const cur = app.positions[id]; if (!cur) return;
+      cur.x = worldPt.x - offsetX; cur.y = worldPt.y - offsetY; app.dragging.moved = true; scheduleGeometryUpdate();
+    }
+
+    function onNodePointerUp(evt) {
+      const rect = evt.currentTarget; const g = rect.parentNode; const id = g.getAttribute('data-id');
+      rect.releasePointerCapture(app.dragging?.pointerId || app.draggingGroup?.pointerId); g.classList.remove('dragging'); rect.removeEventListener('pointermove', onNodePointerMove);
+      const rootUp = clientToRoot(evt); const worldUp = rootToWorld(rootUp);
+      const dx = Math.abs((Number(g.dataset.downX)||0) - worldUp.x); const dy = Math.abs((Number(g.dataset.downY)||0) - worldUp.y);
+      const wasClick = (!app.dragging || !app.dragging.moved) && (dx < 0.5 && dy < 0.5) && !app.draggingGroup;
+      app.dragging = null; app.draggingGroup = null;
+      if (wasClick) selectOnly(id);
+    }
+
+    function onNodePointerCancel(evt) {
+      const rect = evt.currentTarget; const g = rect.parentNode; rect.releasePointerCapture(app.dragging?.pointerId || app.draggingGroup?.pointerId); g.classList.remove('dragging'); rect.removeEventListener('pointermove', onNodePointerMove); app.dragging = null; app.draggingGroup = null;
+    }
+
+    let geomRaf = 0; function scheduleGeometryUpdate() { if (geomRaf) cancelAnimationFrame(geomRaf); geomRaf = requestAnimationFrame(() => { geomRaf = 0; updateGraphGeometry(app.model, { positions: app.positions }); }); }
+
+    function selectOnly(id) { app.selectedIds = new Set([id]); app.selectedId = id; updateSelectionHighlight(); renderInspector(); }
+    function clearSelection() { app.selectedIds = new Set(); app.selectedId = null; updateSelectionHighlight(); renderInspector(); }
+
+    function updateSelectionHighlight() {
+      // remove all
+      for (const { rect } of app.elements.nodes.values()) rect.classList.remove('selected');
+      // add for selected
+      for (const id of app.selectedIds) { const el = app.elements.nodes.get(id); if (el) el.rect.classList.add('selected'); }
+    }
+
+    // --- Inspector UI ---
+    function renderInspector() {
+      const ins = $('inspector');
+      if (app.selectedIds.size !== 1) { ins.hidden = true; return; }
+      const id = [...app.selectedIds][0];
+      if (!id || !app.config.nodes[id]) { ins.hidden = true; return; }
+      ins.hidden = false; app.selectedId = id;
+      $('ins-label').value = app.config.nodes[id].label || id;
+      $('ins-label').oninput = (e) => { app.config.nodes[id].label = e.target.value; setTextareaFromConfig(app.config); renderPreservePositions(); };
+      const insCompleted = $('ins-completed');
+      insCompleted.checked = !!app.config.nodes[id].completed;
+      insCompleted.onchange = (e) => { toggleCompletedSubtree(id, e.target.checked); };
+      $('addChildBtn').onclick = () => addChildToNode(id); $('deleteNodeBtn').onclick = () => deleteNodeSubtree(id);
+      $('ins-col-raw-title').textContent = app.normalize ? 'Raw Ratio' : 'Multiplier'; $('ins-col-norm-title').textContent = app.normalize ? 'Normalized' : '—';
+      const tbody = $('ins-children').querySelector('tbody'); tbody.innerHTML = '';
+      const children = app.config.nodes[id].children || []; const sum = children.reduce((a, ch) => a + (Number(ch.ratio)||0), 0) || 0;
+      for (let i=0; i<children.length; i++) { const ch = children[i]; const tr = document.createElement('tr'); const tdId = document.createElement('td'); const childLabel = app.config.nodes[ch.id]?.label || ch.id; tdId.textContent = displayLabel(childLabel); tr.appendChild(tdId); const tdRatio = document.createElement('td'); tdRatio.className = 'right'; const inp = document.createElement('input'); inp.type = 'number'; inp.step = '0.01'; inp.min = '0'; inp.value = String(Number(ch.ratio)||0); inp.style.width = '90px'; inp.addEventListener('change', () => { const v = Number(inp.value); children[i].ratio = isFinite(v) && v >= 0 ? v : 0; setTextareaFromConfig(app.config); renderPreservePositions(); }); tdRatio.appendChild(inp); tr.appendChild(tdRatio); const tdNorm = document.createElement('td'); tdNorm.className = 'right muted'; tdNorm.textContent = app.normalize && sum > 0 ? percentStr((Number(ch.ratio)||0) / sum) : '—'; tr.appendChild(tdNorm); tbody.appendChild(tr); }
+      $('equalizeBtn').onclick = () => { const n = children.length; if (!n) return; if (app.normalize) { const val = 1 / n; for (const ch of children) ch.ratio = val; } else { for (const ch of children) ch.ratio = 1; } setTextareaFromConfig(app.config); renderPreservePositions(); };
+    }
+
+    // --- Node add/delete helpers ---
+    function generateId(prefix = 'N') { let i = 1; while (app.config.nodes[prefix + i]) i++; return prefix + i; }
+    function findParentId(childId) { for (const [pid, n] of Object.entries(app.config.nodes)) { if ((n.children || []).some(ch => ch.id === childId)) return pid; } return null; }
+    function addChildToNode(parentId) {
+      const newId = generateId('N');
+      const newLabel = 'New Node';
+      app.config.nodes[newId] = { label: newLabel, children: [] };
+      const parent = app.config.nodes[parentId];
+      if (!parent.children) parent.children = [];
+      // Determine placement index BEFORE pushing new child
+      const index = parent.children.length; // 0 -> center below, 1 -> left, 2 -> right, 3 -> further left, 4 -> further right, ...
+      parent.children.push({ id: newId, ratio: 1 });
+
+      // Pre-set manual position so it overrides auto layout merge
+      const p = app.positions[parentId];
+      const baseW = (p && p.w) || 170;
+      const baseH = (p && p.h) || 64;
+      const vGap = 120;            // match autoLayout vertical gap
+      const hGap = 60;             // match autoLayout horizontal gap
+      const step = baseW + hGap;   // horizontal spacing between siblings
+      const centerX = p ? (p.x + baseW / 2) : 0;
+      const centerY = p ? (p.y + baseH + vGap) : 0;
+
+      let offsetX = 0;
+      if (index > 0) {
+        const k = Math.ceil(index / 2);      // 1,1,2,2,3,3...
+        const dir = (index % 2 === 1) ? -1 : 1; // left for odd, right for even
+        offsetX = dir * k * step;
+      }
+      const childX = centerX - baseW / 2 + offsetX;
+      const childY = centerY;
+      app.positions[newId] = { x: childX, y: childY, w: baseW, h: baseH };
+
+      setTextareaFromConfig(app.config);
+      renderPreservePositions();
+      selectOnly(newId);
+      startInlineLabelEdit(newId);
+    }
+    function collectSubtreeIds(startId) { const ids = new Set(); const q = [startId]; while (q.length) { const cur = q.shift(); if (ids.has(cur)) continue; ids.add(cur); const node = app.config.nodes[cur]; for (const ch of (node?.children || [])) q.push(ch.id); } return ids; }
+    function deleteNodeSubtree(nodeId) { if (nodeId === app.config.root) { alert('Deleting the root node is not supported. Change the root in JSON first.'); return; } const parentId = findParentId(nodeId); const subtree = collectSubtreeIds(nodeId); const count = subtree.size; const confirmed = confirm(`Delete node "${app.config.nodes[nodeId]?.label || nodeId}" and its ${count-1} descendant(s)?`); if (!confirmed) return; if (parentId) { const pc = app.config.nodes[parentId].children || []; app.config.nodes[parentId].children = pc.filter(ch => ch.id !== nodeId); } for (const id of subtree) { delete app.config.nodes[id]; delete app.positions[id]; app.selectedIds.delete(id); } if (subtree.has(app.selectedId)) app.selectedId = null; setTextareaFromConfig(app.config); renderPreservePositions(); }
+
+    function toggleCompletedSubtree(nodeId, completed) {
+      const ids = collectSubtreeIds(nodeId);
+      for (const id of ids) {
+        if (app.config.nodes[id]) app.config.nodes[id].completed = !!completed;
+      }
+      setTextareaFromConfig(app.config);
+      renderPreservePositions();
+    }
+
+    // --- Background interactions: zoom, pan, marquee selection ---
+    let spacePressed = false; // hold Space to pan with left-drag
+    const marquee = { active: false, x1: 0, y1: 0, x2: 0, y2: 0, rectEl: null };
+
+    function onWheelZoom(evt) {
+      evt.preventDefault();
+      const delta = Math.sign(evt.deltaY);
+      const zoomFactor = 1.1;
+      const prevZoom = app.zoom;
+      let nextZoom = delta > 0 ? prevZoom / zoomFactor : prevZoom * zoomFactor;
+      nextZoom = Math.max(0.2, Math.min(5, nextZoom));
+      if (nextZoom === prevZoom) return;
+      const rootPt = clientToRoot(evt);
+      const worldBefore = rootToWorld(rootPt);
+      app.zoom = nextZoom;
+      // keep cursor anchored
+      app.panX = rootPt.x - worldBefore.x * app.zoom;
+      app.panY = rootPt.y - worldBefore.y * app.zoom;
+      updateViewportTransform();
+      // Close edge editor on zoom to avoid misplaced overlay
+      if (app.elements.overlay) {
+        const ex = app.elements.overlay.querySelector('foreignObject[data-role="edge-editor"]');
+        if (ex) ex.remove();
+      }
+    }
+
+    let panDrag = null; // { pointerId, startRoot:{x,y}, panX0, panY0 }
+
+    function onSvgPointerDown(evt) {
+      // Close edge editor when interacting with background
+      if (app.elements.overlay) {
+        const exBg = app.elements.overlay.querySelector('foreignObject[data-role="edge-editor"]');
+        if (exBg) exBg.remove();
+      }
+      if (evt.target !== $('svg')) return; // only background
+      const rootPt = clientToRoot(evt);
+      if (evt.button === 1 || (evt.button === 0 && spacePressed)) {
+        // start panning
+        panDrag = { pointerId: evt.pointerId, startRoot: rootPt, panX0: app.panX, panY0: app.panY };
+        $('svg').setPointerCapture(evt.pointerId);
+      } else if (evt.button === 0) {
+        // start marquee selection
+        marquee.active = true; marquee.x1 = rootPt.x; marquee.y1 = rootPt.y; marquee.x2 = rootPt.x; marquee.y2 = rootPt.y;
+        if (!marquee.rectEl) { marquee.rectEl = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); marquee.rectEl.setAttribute('class', 'marquee'); app.elements.overlay.appendChild(marquee.rectEl); }
+        updateMarqueeRect();
+        $('svg').setPointerCapture(evt.pointerId);
+      }
+    }
+
+    function onSvgPointerMove(evt) {
+      const rootPt = clientToRoot(evt);
+      if (panDrag) {
+        app.panX = panDrag.panX0 + (rootPt.x - panDrag.startRoot.x);
+        app.panY = panDrag.panY0 + (rootPt.y - panDrag.startRoot.y);
+        updateViewportTransform();
+        return;
+      }
+      if (marquee.active) {
+        marquee.x2 = rootPt.x; marquee.y2 = rootPt.y; updateMarqueeRect();
+      }
+    }
+
+    function onSvgPointerUp(evt) {
+      if (panDrag) {
+        $('svg').releasePointerCapture(panDrag.pointerId); panDrag = null; return;
+      }
+      if (marquee.active) {
+        $('svg').releasePointerCapture(evt.pointerId);
+        finalizeMarqueeSelection(evt);
+        marquee.active = false; if (marquee.rectEl) { marquee.rectEl.remove(); marquee.rectEl = null; }
+      }
+    }
+
+    function updateMarqueeRect() {
+      if (!marquee.rectEl) return;
+      const x = Math.min(marquee.x1, marquee.x2); const y = Math.min(marquee.y1, marquee.y2);
+      const w = Math.abs(marquee.x2 - marquee.x1); const h = Math.abs(marquee.y2 - marquee.y1);
+      marquee.rectEl.setAttribute('x', x); marquee.rectEl.setAttribute('y', y); marquee.rectEl.setAttribute('width', w); marquee.rectEl.setAttribute('height', h);
+    }
+
+    function finalizeMarqueeSelection(evt) {
+      const x = Math.min(marquee.x1, marquee.x2); const y = Math.min(marquee.y1, marquee.y2);
+      const w = Math.abs(marquee.x2 - marquee.x1); const h = Math.abs(marquee.y2 - marquee.y1);
+      const x2 = x + w, y2 = y + h;
+      const selected = new Set();
+      // Check intersection in root coords using world positions transformed by pan/zoom
+      for (const [id, p] of Object.entries(app.positions)) {
+        const tl = worldToRoot({ x: p.x, y: p.y });
+        const br = worldToRoot({ x: p.x + p.w, y: p.y + p.h });
+        const nx1 = tl.x, ny1 = tl.y; const nx2 = br.x, ny2 = br.y;
+        const intersects = !(nx2 < x || nx1 > x2 || ny2 < y || ny1 > y2);
+        if (intersects) selected.add(id);
+      }
+      app.selectedIds = selected;
+      app.selectedId = app.selectedIds.size === 1 ? [...app.selectedIds][0] : null;
+      updateSelectionHighlight();
+      renderInspector();
+    }
+
+    // Compute per-node scales based on children count per parent and propagate to all descendants.
+    function computeScaleFactors(model, threshold, minScale) {
+      // baseScale applies to direct children of crowded parents
+      const baseScale = {};
+      for (const [pid, node] of Object.entries(model.nodes)) {
+        const cnt = (node.children || []).length;
+        let s = 1;
+        if (cnt > threshold) {
+          s = Math.max(minScale, threshold / cnt);
+        }
+        for (const ch of node.children || []) {
+          baseScale[ch.id] = s;
+        }
+      }
+      // propagate down the tree so that if a parent is scaled (<1) all its descendants inherit that same scale
+      const final = {};
+      const rootId = model.root;
+      final[rootId] = 1;
+      const q = [rootId];
+      while (q.length) {
+        const pid = q.shift();
+        const parentScale = final[pid] ?? 1;
+        const children = model.nodes[pid]?.children || [];
+        for (const ch of children) {
+          const base = baseScale[ch.id] ?? 1;
+          const eff = parentScale < 1 ? parentScale : base;
+          final[ch.id] = final[ch.id] != null ? Math.min(final[ch.id], eff) : eff;
+          q.push(ch.id);
+        }
+      }
+      return final;
+    }
+
+    // --- Main render orchestrator ---
+    function renderPreservePositions() {
+      try { setConfigFromTextarea(); showWarnings([]); } catch (e) { showWarnings([e.message]); return; }
+      app.normalize = $('normalize').checked;
+      let model; try { model = buildModel(app.config, app.normalize); } catch (e) { showWarnings([e.message]); clearSVG(); return; }
+      app.model = model; const base = Number($('baseCount').value) || 0; const { values, orderByLevel, maxLevel } = computeValues(model, base);
+      const wrap = $('canvasWrap'); const wrapRect = wrap.getBoundingClientRect(); const cw = Math.max(600, Math.floor(wrapRect.width));
+      const auto = autoLayout(orderByLevel, maxLevel, cw - 2); const merged = mergePositions(auto.positions); app.positions = merged;
+
+      // Auto-scale
+      const autoScale = $('autoScale').checked; const threshold = Math.max(1, Number($('scaleThreshold').value) || 4); const minScale = Math.min(1, Math.max(0.2, Number($('minScale').value) || 0.6));
+      app.scaleFactors = autoScale ? computeScaleFactors(model, threshold, minScale) : {};
+
+      drawGraph(model, values, { positions: merged, width: auto.width, height: auto.height }); showWarnings(model.warnings); renderInspector();
+    }
+
+    function clearSVG() { const svg = $('svg'); while (svg.firstChild) svg.removeChild(svg.firstChild); svg.setAttribute('viewBox', '0 0 800 600'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); }
+
+    // --- Events ---
+    $('renderBtn').addEventListener('click', renderPreservePositions);
+    $('downloadBtn').addEventListener('click', () => downloadSVG($('svg')));
+    $('baseCount').addEventListener('input', renderPreservePositions);
+    $('configInput').addEventListener('input', renderPreservePositions);
+    $('normalize').addEventListener('change', renderPreservePositions);
+    $('autoScale').addEventListener('change', renderPreservePositions);
+    $('scaleThreshold').addEventListener('input', renderPreservePositions);
+    $('minScale').addEventListener('input', renderPreservePositions);
+    // toggle JSON config panel visibility
+    $('toggleConfig').addEventListener('change', () => { $('configSection').hidden = !$('toggleConfig').checked; });
+    window.addEventListener('resize', renderPreservePositions);
+
+    $('svg').addEventListener('wheel', onWheelZoom, { passive: false });
+    $('svg').addEventListener('pointerdown', onSvgPointerDown);
+    $('svg').addEventListener('pointermove', onSvgPointerMove);
+    $('svg').addEventListener('pointerup', onSvgPointerUp);
+
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') { spacePressed = true; e.preventDefault(); } });
+    window.addEventListener('keyup', (e) => { if (e.code === 'Space') { spacePressed = false; e.preventDefault(); } });
+
+    // Seed and initial render
+    app.config = JSON.parse(JSON.stringify(defaultConfig));
+    setTextareaFromConfig(app.config);
+    renderPreservePositions();
+  </script>
+</body>
+</html>
